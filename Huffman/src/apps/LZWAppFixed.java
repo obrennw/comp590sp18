@@ -42,7 +42,7 @@ import models.Unsigned12BitModel.Unsigned12BitSymbol;
 //}
 
 public class LZWAppFixed {
-	
+	public static int dict_size = 0;
 	public static void main(String[] args) throws IOException, InsufficientBitsLeftException {
 		long start = System.nanoTime();
 		long e9 = 1000000000;
@@ -51,30 +51,32 @@ public class LZWAppFixed {
 		int height = 450;
 		int num_frames = 150;
 		int size = width*height*num_frames;
-		//int tbit = 4096;
-		int tbit = 65536;
-		//int tbit = 1048576;
-		//int tbit = 2097152;
-		//int tbit = 4194304;
-		//int tbit = 16777216;
-		//int tbit = 1073741824;
+		//long tbit = 4096;
+		//long tbit = 65536;
+		//long tbit = 1048576;
+		//long tbit = 2097152;
+		//long tbit = 4194304;
+		//long tbit = 16777216;
+		//long tbit = 1073741824;
+		long tbit = 4294967296l;
 		
 		//int lbit = 12;
-		int lbit = 16;
+		//int lbit = 16;
 		//int lbit = 20;
 		//int lbit = 21;
 		//int lbit = 22;
 		//int lbit = 24;
 		//int lbit = 30;
+		int lbit = 32;
 
 		
-		//String base = args[0];
-		String base = "bunny";
-		//String vto = args[1];
-		String fixed = "20fixed-";
-		String vto = "fwh";
-		//String process = args[2];
-		String process = "decode";
+		String base = args[0];
+		//String base = "jellyfish";
+		String vto = args[1];
+		//String vto = "wfh";
+		String process = args[2];
+		//String process = "decode";
+		String fixed = "32fixed-";
 		VideoTraversalOrder order = VideoTraversalOrder.WIDTH_HEIGHT_FRAME;
 		if(process.equals("encode")){
 			switch(vto){
@@ -101,11 +103,7 @@ public class LZWAppFixed {
 					System.exit(1);
 			}
 			
-			PrintStream output = new PrintStream(new BufferedOutputStream(
-					new FileOutputStream(
-							"/Users/oqbrennw/Desktop/COMP590/RawVideoSamples/" + base +"/"+base+"-encodeOutput-"+fixed+vto+".txt")
-					), true);
-			System.setOut(output);
+			
 			String filename="/Users/oqbrennw/Desktop/COMP590/RawVideoSamples/" + base +"/"+ base + ".450p.yuv";
 			File file = new File(filename);
 	
@@ -142,7 +140,28 @@ public class LZWAppFixed {
 					compressed = LZWAppFixed.lzwCompressVideo(video, tbit,height,width,num_frames);
 					break;	
 			}
-								  
+			
+			if(LZWAppFixed.dict_size >= 0 && LZWAppFixed.dict_size <= 256){
+				tbit = 256;
+				lbit = 8;
+				fixed = "8fixed-";
+			} else if (LZWAppFixed.dict_size > 256 && LZWAppFixed.dict_size <= 65536){
+				tbit = 65536;
+				lbit = 16;
+				fixed = "16fixed-";
+			} else if (LZWAppFixed.dict_size > 65536 && LZWAppFixed.dict_size <= 16777216){
+				tbit = 16777216;
+				lbit = 24;
+				fixed = "24fixed-";
+			}
+			
+			PrintStream output = new PrintStream(new BufferedOutputStream(
+					new FileOutputStream(
+							"/Users/oqbrennw/Desktop/COMP590/RawVideoSamples/" + base +"/"+base+"-encodeOutput-"+fixed+vto+".txt")
+					), true);
+			System.setOut(output);
+			
+			System.out.println("Compress hashmap size: "+ LZWAppFixed.dict_size);			
 			long compression = System.nanoTime()-start;
 			System.out.println("Compression Time: " +((compression/e9)/60)+"m "+((compression/e9)%60)+"s");
 			int compressed_length = compressed.length;
@@ -163,12 +182,30 @@ public class LZWAppFixed {
 			long encoding = System.nanoTime()-start;
 			System.out.println("Encoding Time: " +((encoding/e9)/60)+"m "+((encoding/e9)%60)+"s");
 			PrintWriter wr = new PrintWriter("/Users/oqbrennw/Desktop/COMP590/RawVideoSamples/" + base +"/"+ base + ""+fixed+vto+"-compressed-size.txt");
+			PrintWriter wr2 = new PrintWriter("/Users/oqbrennw/Desktop/COMP590/RawVideoSamples/currentKey.txt");
 			wr.println(compressed_length);
+			wr2.println(lbit);
 			wr.close();
+			wr2.close();
 			long runtime = System.nanoTime()-start;
 			System.out.println("Output Time: " +((runtime/e9)/60)+"m "+((runtime/e9)%60)+"s");
 			
 		} else if(process.equals("decode")){
+			Scanner keyScan = new Scanner(new File("/Users/oqbrennw/Desktop/COMP590/RawVideoSamples/currentKey.txt"));
+			lbit = keyScan.nextInt();
+			if(lbit == 8){
+				tbit = 256;
+				lbit = 8;
+				fixed = "8fixed-";
+			} else if (lbit == 16){
+				tbit = 65536;
+				lbit = 16;
+				fixed = "16fixed-";
+			} else if (lbit == 24){
+				tbit = 16777216;
+				lbit = 24;
+				fixed = "24fixed-";
+			}
 			PrintStream output = new PrintStream(new BufferedOutputStream(
 					new FileOutputStream(
 							"/Users/oqbrennw/Desktop/COMP590/RawVideoSamples/" + base +"/"+base+"-decodeOutput-"+fixed+vto+".txt")
@@ -232,11 +269,12 @@ public class LZWAppFixed {
 		if(!(w.equals(empty))){
 			res.add(dict.get(w));
 		}
-		System.out.println("Compress hashmap size: "+ dict.size());
+		LZWAppFixed.dict_size = dict.size();
+		//System.out.println("Compress hashmap size: "+ dict.size());
 		return res.stream().mapToInt(Integer::intValue).toArray();
 	}
 	
-	private static int[] lzwCompressVideo(byte[][][] video, int limit, int i_limit, int j_limit, int k_limit) throws IOException{
+	private static int[] lzwCompressVideo(byte[][][] video, long limit, int i_limit, int j_limit, int k_limit) throws IOException{
 		HashMap<ArrayList<Byte>,Integer> dict = new HashMap<ArrayList<Byte>,Integer>();
 		for(int i=0; i<256; i++){
 			ArrayList<Byte> list = new ArrayList<Byte>();
@@ -270,7 +308,8 @@ public class LZWAppFixed {
 		if(!(w.equals(empty))){
 			res.add(dict.get(w));
 		}
-		System.out.println("Compress hashmap size: "+ dict.size());
+		LZWAppFixed.dict_size = dict.size();
+		//System.out.println("Compress hashmap size: "+ dict.size());
 		dict = null; 
 		return res.stream().mapToInt(Integer::intValue).toArray();
 	}
@@ -310,7 +349,12 @@ public class LZWAppFixed {
 			throws InsufficientBitsLeftException, IOException {
 		ArrayList<Integer> res = new ArrayList<Integer>();
 		for(int i=0; i<size; i++){
-			res.add(bit_source.next(lbit));
+			try{
+				res.add(bit_source.next(lbit));
+			} catch (InsufficientBitsLeftException e){
+				System.out.println("i caused error at: "+i);
+				throw e;
+			}
 		}
 		return res.stream().mapToInt(Integer::intValue).toArray();
 	}
@@ -352,7 +396,7 @@ public class LZWAppFixed {
 		System.out.println("Finished Decompression");
 	}
 	
-	private static byte[] decompressLZWVideo(int[] list,int limit, int size) throws IOException {
+	private static byte[] decompressLZWVideo(int[] list,long limit, int size) throws IOException {
 		byte [] video = new byte[size];
 		int z = 0;
 		HashMap<Integer,ArrayList<Byte>> dict = new HashMap<Integer,ArrayList<Byte>>();

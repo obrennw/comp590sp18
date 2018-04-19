@@ -49,9 +49,9 @@ public class LZWApp {
 		int height = 450;
 		int num_frames = 150;
 		
-		//int tbit = 4096;
+		int tbit = 4096;
 		//int tbit = 16384;
-		int tbit = 65536;
+		//int tbit = 65536;
 		//int tbit = 524288;
 		
 		//String base = args[0];
@@ -90,9 +90,9 @@ public class LZWApp {
 		System.setOut(output);
 		String filename="/Users/oqbrennw/Desktop/COMP590/RawVideoSamples/" + base +"/"+ base + ".450p.yuv";
 		File file = new File(filename);
-		//Unsigned12BitModel model = new Unsigned12BitModel();
+		Unsigned12BitModel model = new Unsigned12BitModel();
 		//Unsigned14BitModel model = new Unsigned14BitModel();
-		Unsigned16BitModel model = new Unsigned16BitModel();
+		//Unsigned16BitModel model = new Unsigned16BitModel();
 		//Unsigned24BitModel model = new Unsigned24BitModel();
 
 
@@ -142,17 +142,17 @@ public class LZWApp {
 
 		SymbolEncoder encoder = new ArithmeticEncoder(model);
 
-		//Symbol[] symbols = new Unsigned12BitSymbol[tbit];
+		Symbol[] symbols = new Unsigned12BitSymbol[tbit];
 		//Symbol[] symbols = new Unsigned14BitSymbol[tbit];
-		Symbol[] symbols = new Unsigned16BitSymbol[tbit];
+		//Symbol[] symbols = new Unsigned16BitSymbol[tbit];
 		//Symbol[] symbols = new Unsigned24BitSymbol[tbit];
 		for (int v=0; v<tbit; v++) {
 			SymbolModel s = model.getByIndex(v);
 			Symbol sym = s.getSymbol();
 			symbols[v] = sym;
 
-			//long prob = s.getProbability(model.getCountTotal());
-			//System.out.println("Symbol: " + sym + " probability: " + prob + "/" + model.getCountTotal());
+			long prob = s.getProbability(model.getCountTotal());
+			System.out.println("Symbol: " + sym + " probability: " + prob + "/" + model.getCountTotal());
 		}	
 		System.out.println("Sybmols generated");
 
@@ -300,9 +300,9 @@ public class LZWApp {
 		return (byte)0;
 	}
 	
-	private static void trainModelWithArray(//Unsigned12BitModel 
+	private static void trainModelWithArray(Unsigned12BitModel 
 			//Unsigned14BitModel
-			Unsigned16BitModel 
+			//Unsigned16BitModel 
 			//Unsigned24BitModel 
 			model
 			, int[] compressed) {
